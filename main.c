@@ -30,38 +30,43 @@ void print_you_won();
 void print_you_lost();
 
 int main() {
-    print_logo();
-
     int n, mine_count, row, col;
+    int *revealed, *marked;
+    int playing, reveal_status, mark_status; // bools
+    char **board;
+
+    print_logo();
 
     n = board_size_input();
     mine_count = mine_count_input(n);
 
-    int *revealed = calloc(n * n, sizeof(int)); // 0 = not revealed, 1 = revealed
-    int *marked = calloc(n * n, sizeof(int));   // 0 = not marked, 1 = marked
-    char **board = create_empty_board(n);
+    revealed = (int *) calloc(n * n, sizeof(int)); // 0 = not revealed, 1 = revealed
+    marked = (int *) calloc(n * n, sizeof(int));   // 0 = not marked, 1 = marked
+
+    board = create_empty_board(n);
+
     fill_board(board, n, mine_count);
     show_board(board, revealed, marked, n);
 
-    int playing = 1;
-    int reveal_status;
-    int mark_status;
+    playing = 1;
     while (playing) {
         do {
             char input[10];
             char command;
+            int scan_result;
             printf("\nPlease enter the field you want to reveal(r) or mark/unmark(m) (command row column) e.g: 'r 2 5':\n");
             fgets(input, sizeof(input), stdin);
-            int scan_result = sscanf(input, "%c %d %d", &command, &row, &col);
+            scan_result = sscanf(input, "%c %d %d", &command, &row, &col);
             reveal_status = 0;
             mark_status = 0;
             if (scan_result != 3 || (command != 'r' && command != 'm')) {
                 printf("Invalid input. Please follow the format 'r/m row column'.\n");
             } else {
-                if (command == 'r')
+                if (command == 'r') {
                     reveal_status = reveal_field(board, revealed, marked, n, row - 1, col - 1);
-                else
+                } else {
                     mark_status = mark_field(revealed, marked, n, row - 1, col - 1);
+                }
             }
         } while (!reveal_status && !mark_status);
 
@@ -72,8 +77,9 @@ int main() {
         for (int i = 0; i < n * n; ++i) {
             hidden_fields_count -= revealed[i];
         }
-        if (reveal_status == 2 || hidden_fields_count == mine_count)
+        if (reveal_status == 2 || hidden_fields_count == mine_count) {
             playing = 0;
+        }
     }
 
     if (reveal_status == 2) {
@@ -129,9 +135,9 @@ int reveal_field(char **board, int *revealed, int *marked, int n, int row, int c
                 // recursively reveal all neighbours if field is empty
                 for (int r = MAX(0, row - 1); r <= MIN(n - 1, row + 1); ++r) {
                     for (int c = MAX(0, col - 1); c <= MIN(n - 1, col + 1); ++c) {
-                        if (r == row && c == col) continue;
-                        if (!revealed[r * n + c])
+                        if ((r != row || c != col) && !revealed[r * n + c]) {
                             reveal_field(board, revealed, marked, n, r, c);
+                        }
                     }
                 }
                 return 1;
@@ -141,10 +147,11 @@ int reveal_field(char **board, int *revealed, int *marked, int n, int row, int c
         }
     }
 
-    if (row < n && col < n && row >= 0 && col >= 0)
+    if (row < n && col < n && row >= 0 && col >= 0) {
         printf("You can't reveal (%d, %d), because it is already revealed!\n", row + 1, col + 1);
-    else
+    } else {
         printf("You can't reveal (%d, %d), because it is not on the board!\n", row + 1, col + 1);
+    }
     return 0;
 }
 
@@ -155,45 +162,52 @@ void show_board(char **board, const int *revealed, const int *marked, int n) {
     printf("\n");
     printf("   ");
     for (int i = 0; i < n; ++i) {
-        if (i < 9)
+        if (i < 9) {
             printf("  ");
-        else
+        } else {
             printf(" 1");
+        }
     }
     printf("\n   ");
     for (int i = 0; i < n; ++i) {
-        if (i < 9)
+        if (i < 9) {
             printf(" %d", i + 1);
-        else
+        } else {
             printf(" %d", i - 9);
+        }
     }
     printf("\n");
     for (int i = 0; i < n; ++i) {
-        if (i < 9) printf(" ");
+        if (i < 9) {
+            printf(" ");
+        }
         printf("%d:|", i + 1);
         for (int j = 0; j < n; ++j) {
-            if (revealed[i * n + j])
+            if (revealed[i * n + j]) {
                 printf("%c|", board[i][j]);
-            else if (marked[i * n + j])
+            } else if (marked[i * n + j]) {
                 printf("#|");
-            else
+            } else {
                 printf("-|");
+            }
         }
         printf("\n");
     }
     printf("   ");
     for (int i = 0; i < n; ++i) {
-        if (i < 9)
+        if (i < 9) {
             printf(" %d", i + 1);
-        else
+        } else {
             printf(" %d", i - 9);
+        }
     }
     printf("\n   ");
     for (int i = 0; i < n; ++i) {
-        if (i < 9)
+        if (i < 9) {
             printf("  ");
-        else
+        } else {
             printf(" 1");
+        }
     }
     printf("\n");
     for (int i = 0; i < n * 2 + 4; ++i) {
@@ -229,16 +243,16 @@ void fill_board(char **board, int n, int mine_count) {
                 int col_max = MIN(n - 1, j + 1);
                 for (int r = row_min; r <= row_max; ++r) {
                     for (int c = col_min; c <= col_max; ++c) {
-                        if (r == i && c == j)
-                            continue;
-                        if (board[r][c] == '*')
+                        if ((r != i || c != j) && board[r][c] == '*') {
                             bomb_count++;
+                        }
                     }
                 }
-                if (bomb_count > 0)
+                if (bomb_count > 0) {
                     board[i][j] = '0' + bomb_count;
-                else
+                } else {
                     board[i][j] = ' ';
+                }
             }
         }
     }
@@ -255,7 +269,9 @@ char **create_empty_board(int n) {
 
 int is_duplicate(int value, const int *arr, int size) {
     for (int i = 0; i < size; ++i) {
-        if (arr[i] == value) return 1;
+        if (arr[i] == value) {
+            return 1;
+        }
     }
     return 0;
 }
@@ -263,7 +279,6 @@ int is_duplicate(int value, const int *arr, int size) {
 int mine_count_input(int n) {
     int mine_count;
     int mine_limit = ceil((double) (n * n) * 0.25);
-
     do {
         char input[10];
         printf("Please enter the number of mines! (MIN: 5, MAX: %d)\n", mine_limit);
@@ -273,16 +288,16 @@ int mine_count_input(int n) {
         if (*endptr != '\0' && *endptr != '\n') {
             printf("Invalid input. Please input a valid number.\n");
         } else {
-            if (mine_count < 5 || mine_count > mine_limit) printf("%d is not a valid mine count!\n", mine_count);
+            if (mine_count < 5 || mine_count > mine_limit) {
+                printf("%d is not a valid mine count!\n", mine_count);
+            }
         }
     } while (mine_count < 5 || mine_count > mine_limit);
-
     return mine_count;
 }
 
 int board_size_input() {
     int n;
-
     do {
         char input[10];
         printf("Please enter the size of your board! (MIN: 5, MAX: 15)\n");
@@ -292,10 +307,11 @@ int board_size_input() {
         if (*endptr != '\0' && *endptr != '\n') {
             printf("Invalid input. Please input a valid number.\n");
         } else {
-            if (n < 5 || n > 15) printf("%d is not a valid boardsize!\n", n);
+            if (n < 5 || n > 15) {
+                printf("%d is not a valid boardsize!\n", n);
+            }
         }
     } while (n < 5 || n > 15);
-
     return n;
 }
 
