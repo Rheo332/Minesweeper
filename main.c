@@ -3,136 +3,140 @@
 #include <math.h>
 #include <time.h>
 
-#define max(a, b) ((a) > (b) ? (a) : (b))
-#define min(a, b) ((a) < (b) ? (a) : (b))
+#define MAX(a, b)               ((a) > (b) ? (a) : (b))
+#define MIN(a, b)               ((a) < (b) ? (a) : (b))
+#define COORD_POS(row, col, n)  ((row) * (n) + (col))
 
-char **createEmptyBoard(int n);
+char **create_empty_board(int n);
 
-void fillBoard(char **board, int n, int mineCount);
+void fill_board(char **board, int n, int mine_count);
 
-void showBoard(char **board, const int *revealed, const int *marked, int n);
+void show_board(char **board, const int *revealed, const int *marked, int n);
 
-int isDuplicate(int value, const int *arr, int size);
+int is_duplicate(int value, const int *arr, int size);
 
-int revealField(char **board, int *revealed, int *marked, int n, int row, int col);
+int reveal_field(char **board, int *revealed, int *marked, int n, int row, int col);
 
-int markField(const int *revealed, int *marked, int n, int row, int col);
+int mark_field(const int *revealed, int *marked, int n, int row, int col);
 
-void printLogo();
+int board_size_input();
 
-void printWinner();
+int mine_count_input(int n);
 
-void printLoser();
+void print_logo();
 
-int boardSizeInput();
+void print_you_won();
 
-int mineCountInput(int n);
+void print_you_lost();
 
 int main() {
-    printLogo();
+    print_logo();
 
-    int n = boardSizeInput();
-    int mineCount = mineCountInput(n);
+    int n, mine_count, row, col;
+
+    n = board_size_input();
+    mine_count = mine_count_input(n);
 
     int *revealed = calloc(n * n, sizeof(int)); // 0 = not revealed, 1 = revealed
     int *marked = calloc(n * n, sizeof(int));   // 0 = not marked, 1 = marked
-    char **board = createEmptyBoard(n);
-    fillBoard(board, n, mineCount);
-    showBoard(board, revealed, marked, n);
+    char **board = create_empty_board(n);
+    fill_board(board, n, mine_count);
+    show_board(board, revealed, marked, n);
 
-    int row;
-    int col;
     int playing = 1;
-    int revealStatus;
-    int markStatus;
+    int reveal_status;
+    int mark_status;
     while (playing) {
         do {
             char input[10];
             char command;
             printf("\nPlease enter the field you want to reveal(r) or mark/unmark(m) (command row column) e.g: 'r 2 5':\n");
             fgets(input, sizeof(input), stdin);
-            int scanResult = sscanf(input, "%c %d %d", &command, &row, &col);
-            revealStatus = 0;
-            markStatus = 0;
-            if (scanResult != 3 || (command != 'r' && command != 'm')) {
+            int scan_result = sscanf(input, "%c %d %d", &command, &row, &col);
+            reveal_status = 0;
+            mark_status = 0;
+            if (scan_result != 3 || (command != 'r' && command != 'm')) {
                 printf("Invalid input. Please follow the format 'r/m row column'.\n");
             } else {
                 if (command == 'r')
-                    revealStatus = revealField(board, revealed, marked, n, row - 1, col - 1);
+                    reveal_status = reveal_field(board, revealed, marked, n, row - 1, col - 1);
                 else
-                    markStatus = markField(revealed, marked, n, row - 1, col - 1);
+                    mark_status = mark_field(revealed, marked, n, row - 1, col - 1);
             }
-        } while (!revealStatus && !markStatus);
+        } while (!reveal_status && !mark_status);
 
-        showBoard(board, revealed, marked, n);
+        show_board(board, revealed, marked, n);
 
         // check win/lose condition
-        int hiddenFieldsCount = n * n;
+        int hidden_fields_count = n * n;
         for (int i = 0; i < n * n; ++i) {
-            hiddenFieldsCount -= revealed[i];
+            hidden_fields_count -= revealed[i];
         }
-        if (revealStatus == 2 || hiddenFieldsCount <= mineCount)
+        if (reveal_status == 2 || hidden_fields_count == mine_count)
             playing = 0;
     }
 
-    if (revealStatus == 2) {
+    if (reveal_status == 2) {
         printf("(%d, %d) was a bomb!\n", row, col);
-        printLoser();
+        print_you_lost();
     } else {
-        printWinner();
+        print_you_won();
     }
 
     for (int i = 0; i < n * n; ++i) {
         revealed[i] = 1;
     }
-    showBoard(board, revealed, marked, n);
+    show_board(board, revealed, marked, n);
 
     free(revealed);
+    free(marked);
     free(board);
 
     printf("\nPress x to exit...\n");
-    while (getchar() != 'x');
+    while (getchar() != 'x') {}
 
     return 0;
 }
 
-int markField(const int *revealed, int *marked, int n, int row, int col) {
+int mark_field(const int *revealed, int *marked, int n, int row, int col) {
+    int pos = COORD_POS(row, col, n);
     if (row >= n || col >= n || row < 0 || col < 0) {
         printf("(%d, %d) is not on the Board!\n", row + 1, col + 1);
         return 0;
     }
-    if (revealed[row * n + col]) {
+    if (revealed[pos]) {
         printf("(%d, %d) is revealed. You can't mark a revealed Field!\n", row + 1, col + 1);
         return 0;
     }
-    marked[row * n + col] = !marked[row * n + col];
+    marked[pos] = !marked[pos];
     return 1;
 }
 
-int revealField(char **board, int *revealed, int *marked, int n, int row, int col) {
-    if (marked[row * n + col]) {
+int reveal_field(char **board, int *revealed, int *marked, int n, int row, int col) {
+    int pos = COORD_POS(row, col, n);
+    if (marked[pos]) {
         printf("You can't reveal (%d, %d), because it is marked.\n", row + 1, col + 1);
         return 0;
     }
 
-    if (row < n && col < n && row >= 0 && col >= 0 && !revealed[row * n + col]) {
+    if (row < n && col < n && row >= 0 && col >= 0 && !revealed[pos]) {
         switch (board[row][col]) {
             case '*':
-                revealed[row * n + col] = 1;
+                revealed[pos] = 1;
                 return 2;
             case ' ':
-                revealed[row * n + col] = 1;
+                revealed[pos] = 1;
                 // recursively reveal all neighbours if field is empty
-                for (int r = max(0, row - 1); r <= min(n - 1, row + 1); ++r) {
-                    for (int c = max(0, col - 1); c <= min(n - 1, col + 1); ++c) {
+                for (int r = MAX(0, row - 1); r <= MIN(n - 1, row + 1); ++r) {
+                    for (int c = MAX(0, col - 1); c <= MIN(n - 1, col + 1); ++c) {
                         if (r == row && c == col) continue;
                         if (!revealed[r * n + c])
-                            revealField(board, revealed, marked, n, r, c);
+                            reveal_field(board, revealed, marked, n, r, c);
                     }
                 }
                 return 1;
             default:
-                revealed[row * n + col] = 1;
+                revealed[pos] = 1;
                 return 1;
         }
     }
@@ -144,7 +148,7 @@ int revealField(char **board, int *revealed, int *marked, int n, int row, int co
     return 0;
 }
 
-void showBoard(char **board, const int *revealed, const int *marked, int n) {
+void show_board(char **board, const int *revealed, const int *marked, int n) {
     for (int i = 0; i < n * 2 + 4; ++i) {
         printf("-");
     }
@@ -198,41 +202,41 @@ void showBoard(char **board, const int *revealed, const int *marked, int n) {
     printf("\n");
 }
 
-void fillBoard(char **board, int n, int mineCount) {
+void fill_board(char **board, int n, int mine_count) {
     // place bombs at random positions
     srand(time(NULL));
-    int mines[mineCount];
-    for (int i = 0; i < mineCount; ++i) {
-        int randomNumber;
+    int mines[mine_count];
+    for (int i = 0; i < mine_count; ++i) {
+        int random_number;
         do {
-            randomNumber = rand() % (n * n) + 1;
-        } while (isDuplicate(randomNumber, mines, mineCount));
-        mines[i] = randomNumber;
-        int row = (int) ceil((double) randomNumber / (double) n) - 1;
-        int col = (randomNumber - 1) % n;
+            random_number = rand() % (n * n) + 1;
+        } while (is_duplicate(random_number, mines, mine_count));
+        mines[i] = random_number;
+        int row = (int) ceil((double) random_number / (double) n) - 1;
+        int col = (random_number - 1) % n;
         board[row][col] = '*';
     }
 
     // calculate neighbour bomb count for non-bomb fields
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
-            int bombCount = 0;
+            int bomb_count = 0;
             if (board[i][j] != '*') {
                 // calculate valid neighbour positions
-                int rowMin = max(0, i - 1);
-                int rowMax = min(n - 1, i + 1);
-                int colMin = max(0, j - 1);
-                int colMax = min(n - 1, j + 1);
-                for (int r = rowMin; r <= rowMax; ++r) {
-                    for (int c = colMin; c <= colMax; ++c) {
+                int row_min = MAX(0, i - 1);
+                int row_max = MIN(n - 1, i + 1);
+                int col_min = MAX(0, j - 1);
+                int col_max = MIN(n - 1, j + 1);
+                for (int r = row_min; r <= row_max; ++r) {
+                    for (int c = col_min; c <= col_max; ++c) {
                         if (r == i && c == j)
                             continue;
                         if (board[r][c] == '*')
-                            bombCount++;
+                            bomb_count++;
                     }
                 }
-                if (bombCount > 0)
-                    board[i][j] = '0' + bombCount;
+                if (bomb_count > 0)
+                    board[i][j] = '0' + bomb_count;
                 else
                     board[i][j] = ' ';
             }
@@ -240,7 +244,7 @@ void fillBoard(char **board, int n, int mineCount) {
     }
 }
 
-char **createEmptyBoard(int n) {
+char **create_empty_board(int n) {
     char *values = calloc(n * n, sizeof(char));
     char **rows = malloc(n * sizeof(char *));
     for (int i = 0; i < n; ++i) {
@@ -249,39 +253,39 @@ char **createEmptyBoard(int n) {
     return rows;
 }
 
-int isDuplicate(int value, const int *arr, int size) {
+int is_duplicate(int value, const int *arr, int size) {
     for (int i = 0; i < size; ++i) {
         if (arr[i] == value) return 1;
     }
     return 0;
 }
 
-int mineCountInput(int n) {
-    int mineCount;
-    int mineLimit = ceil((double) (n * n) * 0.25);
+int mine_count_input(int n) {
+    int mine_count;
+    int mine_limit = ceil((double) (n * n) * 0.25);
 
     do {
         char input[10];
-        printf("Please enter the number of mines! (min: 5, max: %d)\n", mineLimit);
+        printf("Please enter the number of mines! (MIN: 5, MAX: %d)\n", mine_limit);
         fgets(input, sizeof(input), stdin);
         char *endptr;
-        mineCount = strtol(input, &endptr, 10);
+        mine_count = strtol(input, &endptr, 10);
         if (*endptr != '\0' && *endptr != '\n') {
             printf("Invalid input. Please input a valid number.\n");
         } else {
-            if (mineCount < 5 || mineCount > mineLimit) printf("%d is not a valid mine count!\n", mineCount);
+            if (mine_count < 5 || mine_count > mine_limit) printf("%d is not a valid mine count!\n", mine_count);
         }
-    } while (mineCount < 5 || mineCount > mineLimit);
+    } while (mine_count < 5 || mine_count > mine_limit);
 
-    return mineCount;
+    return mine_count;
 }
 
-int boardSizeInput() {
+int board_size_input() {
     int n;
 
     do {
         char input[10];
-        printf("Please enter the size of your board! (min: 5, max: 15)\n");
+        printf("Please enter the size of your board! (MIN: 5, MAX: 15)\n");
         fgets(input, sizeof(input), stdin);
         char *endptr;
         n = strtol(input, &endptr, 10);
@@ -295,7 +299,7 @@ int boardSizeInput() {
     return n;
 }
 
-void printLogo() {
+void print_logo() {
     printf(" ____________________________________________________________\n");
     printf(" |  \\/  (_)                                                   \n");
     printf(" | .  . |_ _ __   ___  _____      _____  ___ _ __   ___ _ __  \n");
@@ -306,7 +310,7 @@ void printLogo() {
     printf("____________________________________________|_|______________\n\n");
 }
 
-void printWinner() {
+void print_you_won() {
     printf("\n__   __                                  _  \n");
     printf("\\ \\ / /                                 | | \n");
     printf(" \\ V /___  _   _  __      _____  _ __   | | \n");
@@ -315,7 +319,7 @@ void printWinner() {
     printf("  \\_/\\___/ \\__,_|   \\_/\\_/ \\___/|_| |_| (_) \n\n");
 }
 
-void printLoser() {
+void print_you_lost() {
     printf("\n__   __             _           _     _  \n");
     printf("\\ \\ / /            | |         | |   | | \n");
     printf(" \\ V /___  _   _   | | ___  ___| |_  | | \n");
